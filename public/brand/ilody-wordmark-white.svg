@@ -1,0 +1,17 @@
+<svg width="394" height="200" viewBox="2 5 197 100" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <title>Ilody Callcenter</title>
+  <g stroke="#FFFFFF" stroke-width="10" stroke-linecap="round">
+    <path d="M21 45V75"/>
+    <path d="M49 17V75"/>
+    <circle cx="82" cy="60" r="15"/>
+    <circle cx="128" cy="60" r="15"/>
+    <path d="M143 17V75"/>
+    <path d="M162 45V60a15 15 0 0 0 30 0M192 45V85a15 15 0 0 1-15 15h-5"/>
+  </g>
+  <g stroke="#8F8CFF" stroke-linecap="round">
+    <path d="M7 23a14 14 0 0 1 28 0" stroke-width="3.6"/>
+    <path d="M7 21v5M35 21v5" stroke-width="6.4"/>
+    <path d="M7 27c0 6 2 8.5 6 9" stroke-width="2.6"/>
+  </g>
+  <circle cx="21" cy="23" r="6.6" fill="#FFB088"/>
+</svg>

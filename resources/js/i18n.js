@@ -23,6 +23,28 @@ export const messages = {
             trust2: 'Opportunités qualifiées',
             trust3: 'Campagnes sur mesure',
         },
+        call: {
+            title: 'Appel sortant',
+            caption: 'Exemple de conversation',
+            agent: 'Ilody',
+            prospect: 'Prospect',
+            lines: [
+                {
+                    who: 'agent',
+                    text: 'Bonjour Madame Peeters, ici Ilody. Vous avez demandé des informations sur l’isolation de votre toiture ?',
+                },
+                { who: 'prospect', text: 'Oui, on aimerait faire les travaux avant l’hiver.' },
+                { who: 'agent', text: 'Un conseiller peut passer chez vous jeudi à 14 h. Cela vous convient ?' },
+                { who: 'prospect', text: 'Jeudi 14 h, c’est parfait.' },
+            ],
+            outcome: 'Rendez-vous fixé',
+            slot: 'jeudi, 14:00',
+        },
+        menu: {
+            open: 'Ouvrir le menu',
+            close: 'Fermer le menu',
+            language: 'Langue',
+        },
         services: {
             eyebrow: 'Nos services',
             title: 'Des solutions complètes pour votre croissance commerciale',
@@ -176,6 +198,28 @@ export const messages = {
             trust1: 'Tweetalige service FR / NL',
             trust2: 'Gekwalificeerde opportuniteiten',
             trust3: 'Campagnes op maat',
+        },
+        call: {
+            title: 'Uitgaande oproep',
+            caption: 'Voorbeeldgesprek',
+            agent: 'Ilody',
+            prospect: 'Prospect',
+            lines: [
+                {
+                    who: 'agent',
+                    text: 'Goedemiddag mevrouw Peeters, u spreekt met Ilody. U vroeg informatie over de isolatie van uw dak?',
+                },
+                { who: 'prospect', text: 'Ja, we willen de werken graag vóór de winter laten uitvoeren.' },
+                { who: 'agent', text: 'Een adviseur kan donderdag om 14 uur bij u langskomen. Past dat voor u?' },
+                { who: 'prospect', text: 'Donderdag 14 uur is prima.' },
+            ],
+            outcome: 'Afspraak vastgelegd',
+            slot: 'donderdag, 14:00',
+        },
+        menu: {
+            open: 'Menu openen',
+            close: 'Menu sluiten',
+            language: 'Taal',
         },
         services: {
             eyebrow: 'Onze diensten',

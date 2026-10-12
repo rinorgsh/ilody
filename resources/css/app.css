@@ -5,70 +5,123 @@
 @source './**/*.vue';
 
 @theme {
-    --font-sans: 'Plus Jakarta Sans', ui-sans-serif, system-ui, sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji',
+    --font-sans: 'Instrument Sans', ui-sans-serif, system-ui, sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji',
         'Segoe UI Symbol', 'Noto Color Emoji';
-    --font-display: 'Fraunces', ui-serif, Georgia, serif;
+    --font-display: 'Bricolage Grotesque', ui-sans-serif, system-ui, sans-serif;
 
-    /* Brand — Premium & Corporate */
-    --color-navy-50: #eef2f8;
-    --color-navy-100: #d3ddec;
-    --color-navy-200: #a7bad9;
-    --color-navy-300: #6d84ab;
-    --color-navy-400: #3e5580;
-    --color-navy-500: #1d3557;
-    --color-navy-600: #142744;
-    --color-navy-700: #0e1f38;
-    --color-navy-800: #0b1f3a;
-    --color-navy-900: #071426;
-    --color-navy-950: #040d1a;
+    /* Marque : encre pour le texte, cobalt pour la voix d'Ilody, abricot pour le prospect / le lead */
+    --color-ink: #15133b;
+    --color-muted: #4f4c75;
+    --color-cobalt: #3a36f0;
+    --color-cobalt-600: #2a26c9;
+    --color-cobalt-300: #8f8cff;
+    --color-cobalt-100: #e4e3ff;
+    --color-apricot: #ffb088;
+    --color-apricot-100: #ffe6d8;
+    --color-paper: #f6f5fb;
+    --color-line: #e2e0ef;
 
-    --color-gold-50: #fbf6e7;
-    --color-gold-100: #f4e7bf;
-    --color-gold-200: #e9d288;
-    --color-gold-300: #dec258;
-    --color-gold-400: #d4af37;
-    --color-gold-500: #c19a2b;
-    --color-gold-600: #a07f22;
-
-    --color-mist: #f5f7fa;
-
-    --shadow-soft: 0 1px 2px rgba(11, 31, 58, 0.04), 0 12px 30px -12px rgba(11, 31, 58, 0.18);
-    --shadow-card: 0 1px 3px rgba(11, 31, 58, 0.06), 0 24px 48px -24px rgba(11, 31, 58, 0.22);
+    --shadow-call: 0 1px 2px rgba(21, 19, 59, 0.05), 0 28px 60px -28px rgba(58, 54, 240, 0.35);
 }
 
 html {
     scroll-behavior: smooth;
+    scroll-padding-top: 5rem;
 }
 
 body {
-    background-color: #ffffff;
-    color: var(--color-navy-800);
+    background-color: var(--color-paper);
+    color: var(--color-ink);
     -webkit-font-smoothing: antialiased;
     text-rendering: optimizeLegibility;
 }
 
 ::selection {
-    background: var(--color-gold-400);
-    color: var(--color-navy-900);
+    background: var(--color-apricot);
+    color: var(--color-ink);
 }
 
-/* Reveal-on-scroll */
-.reveal {
-    opacity: 0;
-    transform: translateY(24px);
-    transition: opacity 0.7s cubic-bezier(0.16, 1, 0.3, 1), transform 0.7s cubic-bezier(0.16, 1, 0.3, 1);
-    will-change: opacity, transform;
+:focus-visible {
+    outline: 2px solid var(--color-cobalt);
+    outline-offset: 3px;
 }
-.reveal.is-visible {
-    opacity: 1;
-    transform: none;
+.on-dark :focus-visible {
+    outline-color: var(--color-apricot);
 }
-@media (prefers-reduced-motion: reduce) {
-    .reveal {
-        opacity: 1;
-        transform: none;
-        transition: none;
+
+@layer components {
+    .btn {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 0.5rem;
+        min-height: 3rem;
+        padding: 0.75rem 1.5rem;
+        border-radius: 9999px;
+        font-weight: 600;
+        font-size: 0.95rem;
+        line-height: 1.2;
+        text-align: center;
+        transition:
+            background-color 0.2s,
+            color 0.2s,
+            border-color 0.2s;
     }
+    .btn-primary {
+        background: var(--color-cobalt);
+        color: #fff;
+    }
+    .btn-primary:hover {
+        background: var(--color-cobalt-600);
+    }
+    .btn-ghost {
+        border: 1.5px solid var(--color-ink);
+        color: var(--color-ink);
+    }
+    .btn-ghost:hover {
+        background: var(--color-ink);
+        color: #fff;
+    }
+    .btn-apricot {
+        background: var(--color-apricot);
+        color: var(--color-ink);
+    }
+    .btn-apricot:hover {
+        background: #fff;
+    }
+
+    .field-label {
+        display: block;
+        margin-bottom: 0.4rem;
+        font-size: 0.875rem;
+        font-weight: 600;
+        color: var(--color-ink);
+    }
+    /* 1rem minimum : en dessous, iOS zoome sur le champ au focus */
+    .field {
+        width: 100%;
+        min-height: 3rem;
+        padding: 0.7rem 0.95rem;
+        border: 1.5px solid var(--color-line);
+        border-radius: 0.9rem;
+        background: var(--color-paper);
+        color: var(--color-ink);
+        font-size: 1rem;
+        transition:
+            border-color 0.2s,
+            background-color 0.2s;
+    }
+    .field::placeholder {
+        color: #8d8aae;
+    }
+    .field:focus {
+        outline: none;
+        border-color: var(--color-cobalt);
+        background: #fff;
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
     html {
         scroll-behavior: auto;
     }

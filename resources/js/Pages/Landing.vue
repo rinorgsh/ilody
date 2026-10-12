@@ -1,18 +1,14 @@
 <script setup>
-import { onMounted, onBeforeUnmount, ref, computed } from 'vue';
+import { onMounted, onBeforeUnmount, ref, computed, watch } from 'vue';
 import { Head, useForm, usePage } from '@inertiajs/vue3';
 import { useI18n } from 'vue-i18n';
 import IlodyLogo from '../components/IlodyLogo.vue';
+import HeroCall from '../components/HeroCall.vue';
 import {
     Target,
     PhoneCall,
     Megaphone,
     GraduationCap,
-    Languages,
-    Layers,
-    SlidersHorizontal,
-    BadgeCheck,
-    MessagesSquare,
     HardHat,
     Zap,
     Building2,
@@ -21,54 +17,31 @@ import {
     ShieldCheck,
     Briefcase,
     Check,
-    ArrowRight,
-    ArrowUpRight,
+    ChevronDown,
     Mail,
     Menu,
     X,
-    Phone,
 } from 'lucide-vue-next';
 
 const { t, tm, locale } = useI18n();
 const page = usePage();
 
 /* ---------- Langue ---------- */
+const locales = ['fr', 'nl'];
 function setLocale(l) {
     locale.value = l;
     localStorage.setItem('ilody_locale', l);
     document.documentElement.lang = l;
 }
 
-/* ---------- Menu mobile ---------- */
+/* ---------- Navigation ---------- */
 const mobileOpen = ref(false);
 const scrolled = ref(false);
 function onScroll() {
-    scrolled.value = window.scrollY > 24;
+    scrolled.value = window.scrollY > 16;
 }
-
-/* ---------- Reveal on scroll ---------- */
-let observer;
-onMounted(() => {
-    onScroll();
-    window.addEventListener('scroll', onScroll, { passive: true });
-    document.documentElement.lang = locale.value;
-
-    observer = new IntersectionObserver(
-        (entries) => {
-            entries.forEach((e) => {
-                if (e.isIntersecting) {
-                    e.target.classList.add('is-visible');
-                    observer.unobserve(e.target);
-                }
-            });
-        },
-        { threshold: 0.12, rootMargin: '0px 0px -40px 0px' }
-    );
-    document.querySelectorAll('.reveal').forEach((el) => observer.observe(el));
-});
-onBeforeUnmount(() => {
-    window.removeEventListener('scroll', onScroll);
-    observer?.disconnect();
+watch(mobileOpen, (open) => {
+    document.body.style.overflow = open ? 'hidden' : '';
 });
 
 function goTo(id) {
@@ -76,17 +49,56 @@ function goTo(id) {
     document.getElementById(id)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
 }
 
-/* ---------- Données services ---------- */
-const services = computed(() => [
+const navLinks = computed(() => [
+    { id: 'services', label: t('nav.services') },
+    { id: 'why', label: t('nav.why') },
+    { id: 'sectors', label: t('nav.sectors') },
+    { id: 'contact', label: t('nav.contact') },
+]);
+
+/* ---------- Barre d'action mobile : visible entre le hero et le formulaire ---------- */
+const heroCta = ref(null);
+const contactSection = ref(null);
+const heroCtaVisible = ref(true);
+const contactVisible = ref(false);
+const showStickyCta = computed(() => !heroCtaVisible.value && !contactVisible.value && !mobileOpen.value);
+
+let observer;
+onMounted(() => {
+    onScroll();
+    window.addEventListener('scroll', onScroll, { passive: true });
+    document.documentElement.lang = locale.value;
+
+    observer = new IntersectionObserver((entries) => {
+        entries.forEach((e) => {
+            if (e.target === heroCta.value) heroCtaVisible.value = e.isIntersecting;
+            if (e.target === contactSection.value) contactVisible.value = e.isIntersecting;
+        });
+    });
+    observer.observe(heroCta.value);
+    observer.observe(contactSection.value);
+});
+onBeforeUnmount(() => {
+    window.removeEventListener('scroll', onScroll);
+    observer?.disconnect();
+    document.body.style.overflow = '';
+});
+
+/* ---------- Services ---------- */
+const services = [
     { key: 'leadgen', icon: Target },
     { key: 'callcenter', icon: PhoneCall },
     { key: 'marketing', icon: Megaphone },
     { key: 'training', icon: GraduationCap },
-]);
+];
+const activeService = ref(0);
+function selectService(i) {
+    // Sur mobile c'est un accordéon (on peut refermer) ; sur desktop, un panneau reste toujours ouvert.
+    const desktop = window.matchMedia('(min-width: 1024px)').matches;
+    activeService.value = !desktop && activeService.value === i ? -1 : i;
+}
 
-const whyIcons = [Languages, Layers, SlidersHorizontal, BadgeCheck, MessagesSquare];
 const sectorIcons = [HardHat, Zap, Building2, Coins, Signal, ShieldCheck, Briefcase];
-
 const whyItems = computed(() => tm('why.items'));
 const sectorItems = computed(() => tm('sectors.items'));
 
@@ -104,12 +116,7 @@ const form = useForm({
     website: '', // honeypot
 });
 
-const serviceOptions = computed(() => [
-    t('services.leadgen.title'),
-    t('services.callcenter.title'),
-    t('services.marketing.title'),
-    t('services.training.title'),
-]);
+const serviceOptions = computed(() => services.map((s) => t('services.' + s.key + '.title')));
 
 function submit() {
     form.post('/contact', {
@@ -120,576 +127,404 @@ function submit() {
         },
     });
 }
-
-const navLinks = computed(() => [
-    { id: 'services', label: t('nav.services') },
-    { id: 'why', label: t('nav.why') },
-    { id: 'sectors', label: t('nav.sectors') },
-    { id: 'contact', label: t('nav.contact') },
-]);
 </script>
 
 <template>
     <Head :title="'Ilody Callcenter — ' + t('hero.title1') + ' ' + t('hero.title2')" />
 
-    <div class="min-h-screen bg-white font-sans text-navy-800 antialiased">
+    <div class="min-h-screen bg-paper font-sans text-ink antialiased">
         <!-- ===================== NAV ===================== -->
         <header
-            class="fixed inset-x-0 top-0 z-50 transition-all duration-300"
-            :class="scrolled ? 'bg-navy-900/90 backdrop-blur-md shadow-lg shadow-navy-950/20' : 'bg-transparent'"
+            class="fixed inset-x-0 top-0 z-50 border-b transition-colors duration-300"
+            :class="scrolled || mobileOpen ? 'border-line bg-paper/90 backdrop-blur-md' : 'border-transparent'"
         >
-            <nav class="mx-auto flex max-w-7xl items-center justify-between px-5 py-4 lg:px-8">
-                <a href="#" @click.prevent="goTo('top')" aria-label="Ilody Callcenter">
-                    <IlodyLogo theme="dark" compact />
+            <nav class="mx-auto flex h-16 max-w-6xl items-center justify-between gap-4 px-5 lg:h-20 lg:px-8">
+                <a href="#top" @click.prevent="goTo('top')" class="shrink-0 rounded-lg">
+                    <IlodyLogo class="h-9 w-auto lg:h-10" />
                 </a>
 
                 <div class="hidden items-center gap-8 lg:flex">
-                    <button
+                    <a
                         v-for="link in navLinks"
                         :key="link.id"
-                        @click="goTo(link.id)"
-                        class="group relative text-sm font-medium text-navy-100 transition hover:text-white"
+                        :href="'#' + link.id"
+                        @click.prevent="goTo(link.id)"
+                        class="text-[0.95rem] font-medium text-ink underline-offset-8 decoration-2 decoration-apricot hover:underline"
                     >
                         {{ link.label }}
-                        <span
-                            class="absolute -bottom-1.5 left-0 h-px w-0 bg-gold-400 transition-all duration-300 group-hover:w-full"
-                        />
-                    </button>
+                    </a>
                 </div>
 
-                <div class="flex items-center gap-3">
-                    <div class="hidden items-center rounded-full border border-white/15 p-0.5 sm:flex">
+                <div class="flex items-center gap-2 sm:gap-3">
+                    <div class="flex items-center rounded-full border border-line bg-white p-1" role="group" :aria-label="t('menu.language')">
                         <button
-                            v-for="l in ['fr', 'nl']"
+                            v-for="l in locales"
                             :key="l"
                             @click="setLocale(l)"
-                            class="rounded-full px-2.5 py-1 text-xs font-semibold uppercase tracking-wide transition"
-                            :class="
-                                locale === l
-                                    ? 'bg-gold-400 text-navy-900'
-                                    : 'text-navy-100 hover:text-white'
-                            "
+                            :aria-pressed="locale === l"
+                            class="min-w-9 rounded-full px-2.5 py-1.5 text-xs font-semibold uppercase transition-colors"
+                            :class="locale === l ? 'bg-ink text-white' : 'text-muted hover:text-ink'"
                         >
                             {{ l }}
                         </button>
                     </div>
 
-                    <button
-                        @click="goTo('contact')"
-                        class="hidden items-center gap-2 rounded-full bg-gold-400 px-5 py-2.5 text-sm font-semibold text-navy-900 shadow-lg shadow-gold-400/20 transition hover:bg-gold-300 hover:shadow-gold-400/40 lg:inline-flex"
-                    >
+                    <button @click="goTo('contact')" class="btn btn-primary hidden lg:inline-flex">
                         {{ t('nav.cta') }}
-                        <ArrowRight class="size-4" />
                     </button>
 
                     <button
                         @click="mobileOpen = !mobileOpen"
-                        class="grid size-10 place-items-center rounded-full border border-white/15 text-white lg:hidden"
-                        aria-label="Menu"
+                        class="grid size-11 place-items-center rounded-full bg-ink text-white lg:hidden"
+                        :aria-label="mobileOpen ? t('menu.close') : t('menu.open')"
+                        :aria-expanded="mobileOpen"
                     >
-                        <Menu v-if="!mobileOpen" class="size-5" />
-                        <X v-else class="size-5" />
+                        <X v-if="mobileOpen" class="size-5" />
+                        <Menu v-else class="size-5" />
                     </button>
                 </div>
             </nav>
-
-            <!-- Menu mobile -->
-            <Transition
-                enter-active-class="transition duration-200 ease-out"
-                enter-from-class="opacity-0 -translate-y-2"
-                leave-active-class="transition duration-150 ease-in"
-                leave-to-class="opacity-0 -translate-y-2"
-            >
-                <div v-if="mobileOpen" class="border-t border-white/10 bg-navy-900/95 backdrop-blur-md lg:hidden">
-                    <div class="mx-auto flex max-w-7xl flex-col gap-1 px-5 py-4">
-                        <button
-                            v-for="link in navLinks"
-                            :key="link.id"
-                            @click="goTo(link.id)"
-                            class="rounded-lg px-3 py-3 text-left text-base font-medium text-navy-100 transition hover:bg-white/5 hover:text-white"
-                        >
-                            {{ link.label }}
-                        </button>
-                        <div class="mt-2 flex items-center justify-between px-3">
-                            <div class="flex items-center rounded-full border border-white/15 p-0.5">
-                                <button
-                                    v-for="l in ['fr', 'nl']"
-                                    :key="l"
-                                    @click="setLocale(l)"
-                                    class="rounded-full px-3 py-1 text-xs font-semibold uppercase transition"
-                                    :class="locale === l ? 'bg-gold-400 text-navy-900' : 'text-navy-100'"
-                                >
-                                    {{ l }}
-                                </button>
-                            </div>
-                            <button
-                                @click="goTo('contact')"
-                                class="inline-flex items-center gap-2 rounded-full bg-gold-400 px-4 py-2 text-sm font-semibold text-navy-900"
-                            >
-                                {{ t('nav.cta') }}
-                            </button>
-                        </div>
-                    </div>
-                </div>
-            </Transition>
         </header>
 
-        <!-- ===================== HERO ===================== -->
-        <section id="top" class="relative overflow-hidden bg-navy-800 pt-32 pb-24 lg:pt-40 lg:pb-32">
-            <!-- Atmosphère -->
-            <div class="pointer-events-none absolute inset-0" aria-hidden="true">
-                <div class="absolute -left-32 -top-24 h-96 w-96 rounded-full bg-navy-500/40 blur-[120px]" />
-                <div class="absolute right-0 top-1/4 h-[28rem] w-[28rem] rounded-full bg-gold-500/10 blur-[130px]" />
-                <div
-                    class="absolute inset-0 opacity-[0.04]"
-                    style="background-image: linear-gradient(#fff 1px, transparent 1px), linear-gradient(90deg, #fff 1px, transparent 1px); background-size: 56px 56px;"
-                />
+        <!-- Menu mobile plein écran -->
+        <Transition
+            enter-active-class="transition duration-200 ease-out"
+            enter-from-class="opacity-0"
+            leave-active-class="transition duration-150 ease-in"
+            leave-to-class="opacity-0"
+        >
+            <div v-if="mobileOpen" class="fixed inset-0 z-40 flex flex-col overflow-y-auto bg-paper px-5 pt-20 pb-8 lg:hidden">
+                <ul class="mt-4">
+                    <li v-for="link in navLinks" :key="link.id" class="border-b border-line">
+                        <a
+                            :href="'#' + link.id"
+                            @click.prevent="goTo(link.id)"
+                            class="block py-5 font-display text-4xl font-bold tracking-tight text-ink"
+                        >
+                            {{ link.label }}
+                        </a>
+                    </li>
+                </ul>
+                <div class="mt-auto flex flex-col gap-4 pt-10">
+                    <button @click="goTo('contact')" class="btn btn-primary w-full">{{ t('nav.cta') }}</button>
+                    <a :href="'mailto:' + contactEmail" class="flex items-center justify-center gap-2 py-2 text-sm font-medium text-muted">
+                        <Mail class="size-4" /> {{ contactEmail }}
+                    </a>
+                </div>
             </div>
+        </Transition>
 
-            <div class="relative mx-auto grid max-w-7xl items-center gap-16 px-5 lg:grid-cols-12 lg:px-8">
-                <div class="lg:col-span-7">
-                    <span
-                        class="reveal inline-flex items-center gap-2 rounded-full border border-gold-400/30 bg-gold-400/10 px-4 py-1.5 text-xs font-semibold uppercase tracking-[0.15em] text-gold-300"
-                    >
-                        <span class="size-1.5 rounded-full bg-gold-400" />
-                        {{ t('hero.eyebrow') }}
-                    </span>
-
-                    <h1 class="reveal mt-7 font-display text-4xl font-semibold leading-[1.08] text-white sm:text-5xl lg:text-6xl" style="transition-delay: 80ms">
+        <main>
+            <!-- ===================== HERO ===================== -->
+            <section id="top" class="relative overflow-hidden pt-28 pb-16 lg:pt-40 lg:pb-28">
+                <div class="mx-auto max-w-6xl px-5 lg:px-8">
+                    <h1 class="font-display text-[clamp(2.6rem,7.4vw,5.25rem)] font-extrabold leading-[0.98] tracking-[-0.025em] text-balance">
                         <span class="block">{{ t('hero.title1') }}</span>
-                        <span class="block text-navy-100">{{ t('hero.title2') }}</span>
-                        <span class="block">
-                            <span class="relative inline-block">
-                                {{ t('hero.title3') }}
-                                <svg class="absolute -bottom-2 left-0 w-full" height="10" viewBox="0 0 300 10" preserveAspectRatio="none" fill="none">
-                                    <path d="M2 7C60 2 240 2 298 7" stroke="#D4AF37" stroke-width="3" stroke-linecap="round" />
-                                </svg>
-                            </span>
-                        </span>
+                        <span class="block">{{ t('hero.title2') }}</span>
+                        <span class="block">{{ t('hero.title3') }}</span>
                     </h1>
 
-                    <p class="reveal mt-8 max-w-xl text-lg leading-relaxed text-navy-100" style="transition-delay: 160ms">
-                        {{ t('hero.subtitle') }}
-                    </p>
-                    <p class="reveal mt-4 max-w-xl text-[0.95rem] leading-relaxed text-navy-200/80" style="transition-delay: 200ms">
-                        {{ t('hero.desc') }}
-                    </p>
+                    <div class="mt-10 grid gap-12 lg:mt-14 lg:grid-cols-12 lg:gap-16">
+                        <div class="lg:col-span-6">
+                            <p class="max-w-xl text-lg leading-relaxed text-muted lg:text-xl">
+                                {{ t('hero.subtitle') }}
+                            </p>
 
-                    <div class="reveal mt-9 flex flex-col gap-3 sm:flex-row sm:items-center" style="transition-delay: 260ms">
-                        <button
-                            @click="goTo('contact')"
-                            class="group inline-flex items-center justify-center gap-2 rounded-full bg-gold-400 px-7 py-3.5 text-sm font-semibold text-navy-900 shadow-xl shadow-gold-400/20 transition hover:bg-gold-300 hover:shadow-gold-400/40"
-                        >
-                            {{ t('hero.cta1') }}
-                            <ArrowRight class="size-4 transition-transform group-hover:translate-x-0.5" />
-                        </button>
-                        <button
-                            @click="goTo('services')"
-                            class="inline-flex items-center justify-center gap-2 rounded-full border border-white/20 px-7 py-3.5 text-sm font-semibold text-white transition hover:border-white/40 hover:bg-white/5"
-                        >
-                            {{ t('hero.cta2') }}
-                        </button>
-                    </div>
+                            <div ref="heroCta" class="mt-8 flex flex-col gap-3 sm:flex-row">
+                                <button @click="goTo('contact')" class="btn btn-primary">{{ t('hero.cta1') }}</button>
+                                <button @click="goTo('services')" class="btn btn-ghost">{{ t('hero.cta2') }}</button>
+                            </div>
 
-                    <div class="reveal mt-10 flex flex-wrap gap-x-7 gap-y-3" style="transition-delay: 320ms">
-                        <div v-for="k in ['trust1', 'trust2', 'trust3']" :key="k" class="flex items-center gap-2 text-sm text-navy-100">
-                            <Check class="size-4 text-gold-400" />
-                            {{ t('hero.' + k) }}
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Visuel : carte "campagne en cours" -->
-                <div class="reveal lg:col-span-5" style="transition-delay: 240ms">
-                    <div class="relative mx-auto max-w-sm">
-                        <div class="absolute -inset-4 rounded-[2rem] bg-gradient-to-br from-gold-400/20 to-transparent blur-2xl" />
-                        <div class="relative rounded-[1.75rem] border border-white/10 bg-navy-700/70 p-6 shadow-2xl backdrop-blur-sm">
-                            <div class="flex items-center justify-between">
-                                <div class="flex items-center gap-2.5">
-                                    <span class="grid size-9 place-items-center rounded-xl bg-gold-400/15">
-                                        <PhoneCall class="size-4 text-gold-400" />
+                            <ul class="mt-10 space-y-3 border-t border-line pt-8">
+                                <li v-for="k in ['trust1', 'trust2', 'trust3']" :key="k" class="flex items-center gap-3 font-medium">
+                                    <span class="grid size-6 shrink-0 place-items-center rounded-full bg-cobalt-100 text-cobalt">
+                                        <Check class="size-3.5" stroke-width="3" />
                                     </span>
-                                    <div class="leading-tight">
-                                        <p class="text-sm font-semibold text-white">Ilody · Live</p>
-                                        <p class="text-[0.7rem] text-navy-200">FR / NL</p>
-                                    </div>
-                                </div>
-                                <span class="inline-flex items-center gap-1.5 rounded-full bg-emerald-400/10 px-2.5 py-1 text-[0.65rem] font-semibold text-emerald-300">
-                                    <span class="size-1.5 animate-pulse rounded-full bg-emerald-400" />
-                                    En cours
-                                </span>
-                            </div>
+                                    {{ t('hero.' + k) }}
+                                </li>
+                            </ul>
+                        </div>
 
-                            <!-- Equalizer -->
-                            <div class="mt-6 flex h-16 items-end justify-center gap-1.5">
-                                <span v-for="n in 22" :key="n" class="eq-bar w-1.5 rounded-full bg-gold-400/80" :style="{ animationDelay: (n * 90) + 'ms' }" />
-                            </div>
-
-                            <div class="mt-6 space-y-3">
-                                <div v-for="row in [
-                                    { label: 'Leads qualifiés', value: '+38 %' },
-                                    { label: 'Rendez-vous fixés', value: '124' },
-                                    { label: 'Taux de contact', value: '61 %' },
-                                ]" :key="row.label" class="flex items-center justify-between rounded-xl bg-white/5 px-4 py-3">
-                                    <span class="text-sm text-navy-100">{{ row.label }}</span>
-                                    <span class="font-display text-base font-semibold text-gold-300">{{ row.value }}</span>
-                                </div>
-                            </div>
+                        <div class="lg:col-span-6 lg:-mt-2">
+                            <HeroCall class="mx-auto max-w-md lg:mr-0" />
                         </div>
                     </div>
                 </div>
-            </div>
-        </section>
+            </section>
 
-        <!-- ===================== SERVICES ===================== -->
-        <section id="services" class="relative bg-mist py-24 lg:py-32">
-            <div class="mx-auto max-w-7xl px-5 lg:px-8">
-                <div class="max-w-3xl">
-                    <p class="reveal text-xs font-semibold uppercase tracking-[0.2em] text-gold-500">
-                        {{ t('services.eyebrow') }}
-                    </p>
-                    <h2 class="reveal mt-4 font-display text-3xl font-semibold leading-tight text-navy-800 sm:text-4xl lg:text-5xl" style="transition-delay: 80ms">
-                        {{ t('services.title') }}
-                    </h2>
-                    <p class="reveal mt-5 text-lg leading-relaxed text-navy-500" style="transition-delay: 140ms">
-                        {{ t('services.intro') }}
-                    </p>
-                </div>
+            <!-- ===================== SERVICES ===================== -->
+            <section id="services" class="bg-white py-20 lg:py-28">
+                <div class="mx-auto max-w-6xl px-5 lg:px-8">
+                    <div class="max-w-2xl">
+                        <h2 class="font-display text-3xl font-bold leading-[1.05] tracking-tight text-balance sm:text-4xl lg:text-5xl">
+                            {{ t('services.title') }}
+                        </h2>
+                        <p class="mt-5 text-lg leading-relaxed text-muted">{{ t('services.intro') }}</p>
+                    </div>
 
-                <div class="mt-14 grid gap-6 lg:grid-cols-2">
-                    <article
-                        v-for="(svc, i) in services"
-                        :key="svc.key"
-                        class="reveal group relative flex flex-col overflow-hidden rounded-3xl border border-navy-100/60 bg-white p-8 shadow-[var(--shadow-soft)] transition duration-300 hover:-translate-y-1 hover:shadow-[var(--shadow-card)]"
-                        :style="{ transitionDelay: (i * 90) + 'ms' }"
-                    >
-                        <span class="absolute right-0 top-0 h-24 w-24 translate-x-8 -translate-y-8 rounded-full bg-gold-400/10 transition group-hover:scale-150" />
-                        <div class="relative flex items-center gap-4">
-                            <span class="grid size-14 shrink-0 place-items-center rounded-2xl bg-navy-800 text-gold-400 shadow-lg shadow-navy-800/20 transition group-hover:bg-navy-700">
-                                <component :is="svc.icon" class="size-6" />
-                            </span>
-                            <h3 class="font-display text-2xl font-semibold text-navy-800">
-                                {{ t('services.' + svc.key + '.title') }}
+                    <!-- Accordéon sur mobile ; liste + panneau côte à côte sur desktop (même balisage) -->
+                    <div class="mt-10 border-t border-line lg:mt-14 lg:grid lg:grid-cols-[minmax(0,21rem)_minmax(0,1fr)] lg:grid-rows-[repeat(4,auto)_1fr] lg:gap-x-14 lg:border-t-0">
+                        <template v-for="(svc, i) in services" :key="svc.key">
+                            <h3 class="border-b border-line lg:col-start-1" :class="i === 0 ? 'lg:border-t' : ''" :style="{ gridRow: i + 1 }">
+                                <button
+                                    :id="'svc-tab-' + svc.key"
+                                    @click="selectService(i)"
+                                    :aria-expanded="activeService === i"
+                                    :aria-controls="'svc-panel-' + svc.key"
+                                    class="flex w-full items-center justify-between gap-4 py-5 text-left font-display text-xl font-bold leading-tight tracking-tight transition-colors lg:py-6 lg:text-2xl"
+                                    :class="activeService === i ? 'text-cobalt' : 'text-ink hover:text-cobalt'"
+                                >
+                                    <span class="flex items-center gap-4">
+                                        <component :is="svc.icon" class="size-6 shrink-0" />
+                                        {{ t('services.' + svc.key + '.title') }}
+                                    </span>
+                                    <ChevronDown
+                                        class="size-5 shrink-0 transition-transform lg:hidden"
+                                        :class="activeService === i ? 'rotate-180' : ''"
+                                    />
+                                </button>
                             </h3>
-                        </div>
-                        <p class="relative mt-5 text-[0.95rem] leading-relaxed text-navy-500">
-                            {{ t('services.' + svc.key + '.text') }}
-                        </p>
-                        <ul class="relative mt-6 grid grid-cols-1 gap-x-6 gap-y-2.5 sm:grid-cols-2">
-                            <li
-                                v-for="item in tm('services.' + svc.key + '.items')"
-                                :key="item"
-                                class="flex items-start gap-2.5 text-sm text-navy-600"
+                            <div
+                                v-show="activeService === i"
+                                :id="'svc-panel-' + svc.key"
+                                role="region"
+                                :aria-labelledby="'svc-tab-' + svc.key"
+                                class="border-b border-line pt-1 pb-7 lg:col-start-2 lg:row-span-5 lg:row-start-1 lg:rounded-[1.75rem] lg:border-0 lg:bg-paper lg:p-10"
                             >
-                                <Check class="mt-0.5 size-4 shrink-0 text-gold-500" />
-                                <span>{{ item }}</span>
-                            </li>
-                        </ul>
-                    </article>
-                </div>
-            </div>
-        </section>
-
-        <!-- ===================== POURQUOI ===================== -->
-        <section id="why" class="relative overflow-hidden bg-navy-800 py-24 lg:py-32">
-            <div class="pointer-events-none absolute inset-0 opacity-[0.04]" aria-hidden="true"
-                style="background-image: linear-gradient(#fff 1px, transparent 1px), linear-gradient(90deg, #fff 1px, transparent 1px); background-size: 56px 56px;" />
-            <div class="pointer-events-none absolute -right-24 top-1/3 h-96 w-96 rounded-full bg-gold-500/10 blur-[130px]" aria-hidden="true" />
-
-            <div class="relative mx-auto max-w-7xl px-5 lg:px-8">
-                <div class="max-w-3xl">
-                    <p class="reveal text-xs font-semibold uppercase tracking-[0.2em] text-gold-400">
-                        {{ t('why.eyebrow') }}
-                    </p>
-                    <h2 class="reveal mt-4 font-display text-3xl font-semibold leading-tight text-white sm:text-4xl lg:text-5xl" style="transition-delay: 80ms">
-                        {{ t('why.title') }}
-                    </h2>
-                    <p class="reveal mt-5 text-lg leading-relaxed text-navy-100" style="transition-delay: 140ms">
-                        {{ t('why.intro') }}
-                    </p>
-                </div>
-
-                <div class="mt-14 grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
-                    <div
-                        v-for="(item, i) in whyItems"
-                        :key="i"
-                        class="reveal group rounded-2xl border border-white/10 bg-white/[0.03] p-7 transition hover:border-gold-400/40 hover:bg-white/[0.06]"
-                        :class="i === 4 ? 'lg:col-span-1' : ''"
-                        :style="{ transitionDelay: (i * 80) + 'ms' }"
-                    >
-                        <span class="grid size-12 place-items-center rounded-xl bg-gold-400/10 text-gold-400 ring-1 ring-gold-400/20">
-                            <component :is="whyIcons[i]" class="size-5" />
-                        </span>
-                        <h3 class="mt-5 font-display text-xl font-semibold text-white">{{ item.title }}</h3>
-                        <p class="mt-2.5 text-sm leading-relaxed text-navy-200">{{ item.text }}</p>
+                                <p class="max-w-xl leading-relaxed text-muted lg:text-lg">
+                                    {{ t('services.' + svc.key + '.text') }}
+                                </p>
+                                <ul class="mt-6 grid gap-x-8 gap-y-3 sm:grid-cols-2 lg:mt-8">
+                                    <li
+                                        v-for="item in tm('services.' + svc.key + '.items')"
+                                        :key="item"
+                                        class="flex items-start gap-3 font-medium"
+                                    >
+                                        <Check class="mt-1 size-4 shrink-0 text-cobalt" stroke-width="3" />
+                                        <span>{{ item }}</span>
+                                    </li>
+                                </ul>
+                            </div>
+                        </template>
                     </div>
+                </div>
+            </section>
 
-                    <!-- Carte CTA -->
-                    <div class="reveal flex flex-col justify-between rounded-2xl bg-gold-400 p-7 text-navy-900" style="transition-delay: 400ms">
-                        <MessagesSquare class="size-8" />
-                        <div class="mt-6">
-                            <p class="font-display text-xl font-semibold leading-snug">{{ t('hero.title1') }} {{ t('hero.title3') }}</p>
-                            <button
-                                @click="goTo('contact')"
-                                class="mt-5 inline-flex items-center gap-2 rounded-full bg-navy-900 px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-navy-800"
-                            >
+            <!-- ===================== POURQUOI ===================== -->
+            <section id="why" class="on-dark bg-cobalt py-20 text-white lg:py-28">
+                <div class="mx-auto grid max-w-6xl gap-10 px-5 lg:grid-cols-12 lg:gap-16 lg:px-8">
+                    <div class="lg:col-span-5">
+                        <div class="lg:sticky lg:top-28">
+                            <h2 class="font-display text-3xl font-bold leading-[1.05] tracking-tight text-balance sm:text-4xl lg:text-5xl">
+                                {{ t('why.title') }}
+                            </h2>
+                            <p class="mt-5 max-w-md text-lg leading-relaxed text-white/85">{{ t('why.intro') }}</p>
+                            <button @click="goTo('contact')" class="btn btn-apricot mt-8 hidden lg:inline-flex">
                                 {{ t('nav.cta') }}
-                                <ArrowUpRight class="size-4" />
                             </button>
                         </div>
                     </div>
-                </div>
-            </div>
-        </section>
 
-        <!-- ===================== SECTEURS ===================== -->
-        <section id="sectors" class="bg-white py-24 lg:py-32">
-            <div class="mx-auto max-w-7xl px-5 lg:px-8">
-                <div class="grid gap-12 lg:grid-cols-12 lg:items-center">
-                    <div class="lg:col-span-5">
-                        <p class="reveal text-xs font-semibold uppercase tracking-[0.2em] text-gold-500">
-                            {{ t('sectors.eyebrow') }}
-                        </p>
-                        <h2 class="reveal mt-4 font-display text-3xl font-semibold leading-tight text-navy-800 sm:text-4xl lg:text-5xl" style="transition-delay: 80ms">
+                    <dl class="border-t border-white/25 lg:col-span-7">
+                        <div v-for="(item, i) in whyItems" :key="i" class="border-b border-white/25 py-6 lg:py-7">
+                            <dt class="font-display text-xl font-bold tracking-tight lg:text-2xl">{{ item.title }}</dt>
+                            <dd class="mt-2 max-w-lg leading-relaxed text-white/85">{{ item.text }}</dd>
+                        </div>
+                    </dl>
+                </div>
+            </section>
+
+            <!-- ===================== SECTEURS ===================== -->
+            <section id="sectors" class="py-20 lg:py-28">
+                <div class="mx-auto max-w-6xl px-5 lg:px-8">
+                    <div class="max-w-2xl">
+                        <h2 class="font-display text-3xl font-bold leading-[1.05] tracking-tight text-balance sm:text-4xl lg:text-5xl">
                             {{ t('sectors.title') }}
                         </h2>
-                        <p class="reveal mt-5 text-lg leading-relaxed text-navy-500" style="transition-delay: 140ms">
-                            {{ t('sectors.intro') }}
-                        </p>
-                        <div class="reveal mt-8 h-px w-24 bg-gradient-to-r from-gold-400 to-transparent" style="transition-delay: 180ms" />
+                        <p class="mt-5 text-lg leading-relaxed text-muted">{{ t('sectors.intro') }}</p>
+                    </div>
+
+                    <ul class="mt-10 flex flex-wrap gap-2.5 lg:mt-14 lg:gap-4">
+                        <li
+                            v-for="(sector, i) in sectorItems"
+                            :key="i"
+                            class="flex items-center gap-3 rounded-full border border-line bg-white py-2.5 pr-5 pl-3 font-display text-base font-semibold tracking-tight lg:py-3.5 lg:pr-8 lg:pl-4 lg:text-2xl"
+                        >
+                            <span class="grid size-8 shrink-0 place-items-center rounded-full bg-apricot-100 lg:size-11">
+                                <component :is="sectorIcons[i]" class="size-4 lg:size-5" />
+                            </span>
+                            {{ sector }}
+                        </li>
+                    </ul>
+                </div>
+            </section>
+
+            <!-- ===================== CONTACT ===================== -->
+            <section id="contact" ref="contactSection" class="on-dark bg-ink py-20 text-white lg:py-28">
+                <div class="mx-auto grid max-w-6xl gap-10 px-5 lg:grid-cols-12 lg:gap-16 lg:px-8">
+                    <div class="lg:col-span-5">
+                        <h2 class="font-display text-3xl font-bold leading-[1.05] tracking-tight text-balance sm:text-4xl lg:text-5xl">
+                            {{ t('contact.title') }}
+                        </h2>
+                        <p class="mt-5 max-w-md text-lg leading-relaxed text-white/75">{{ t('contact.intro') }}</p>
+
+                        <dl class="mt-8 space-y-5 border-t border-white/15 pt-8">
+                            <div>
+                                <dt class="text-sm text-white/60">{{ t('contact.emailLabel') }}</dt>
+                                <dd class="mt-1">
+                                    <a
+                                        :href="'mailto:' + contactEmail"
+                                        class="font-display text-lg font-semibold break-all underline decoration-apricot decoration-2 underline-offset-4 hover:text-apricot sm:text-xl"
+                                    >
+                                        {{ contactEmail }}
+                                    </a>
+                                </dd>
+                            </div>
+                            <div>
+                                <dt class="text-sm text-white/60">{{ t('contact.langLabel') }}</dt>
+                                <dd class="mt-1 font-display text-lg font-semibold sm:text-xl">{{ t('contact.langValue') }}</dd>
+                            </div>
+                        </dl>
                     </div>
 
                     <div class="lg:col-span-7">
-                        <div class="grid gap-4 sm:grid-cols-2">
+                        <div class="rounded-[1.75rem] bg-white p-5 text-ink sm:p-9">
                             <div
-                                v-for="(sector, i) in sectorItems"
-                                :key="i"
-                                class="reveal group flex items-center gap-4 rounded-2xl border border-navy-100/70 bg-mist/60 px-5 py-4 transition hover:border-gold-400/50 hover:bg-white hover:shadow-[var(--shadow-soft)]"
-                                :style="{ transitionDelay: (i * 60) + 'ms' }"
+                                v-if="submitted"
+                                class="flex min-h-[22rem] flex-col items-center justify-center text-center"
+                                role="status"
                             >
-                                <span class="grid size-11 shrink-0 place-items-center rounded-xl bg-navy-800 text-gold-400 transition group-hover:bg-navy-700">
-                                    <component :is="sectorIcons[i]" class="size-5" />
+                                <span class="grid size-14 place-items-center rounded-full bg-cobalt text-white">
+                                    <Check class="size-7" stroke-width="3" />
                                 </span>
-                                <span class="font-medium text-navy-700">{{ sector }}</span>
+                                <p class="mt-6 max-w-sm font-display text-2xl font-bold leading-tight tracking-tight">
+                                    {{ t('contact.form.success') }}
+                                </p>
+                                <a :href="'mailto:' + contactEmail" class="mt-5 font-semibold text-cobalt hover:underline">
+                                    {{ contactEmail }}
+                                </a>
                             </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </section>
 
-        <!-- ===================== CONTACT ===================== -->
-        <section id="contact" class="relative overflow-hidden bg-navy-900 py-24 lg:py-32">
-            <div class="pointer-events-none absolute -left-24 bottom-0 h-96 w-96 rounded-full bg-navy-500/30 blur-[130px]" aria-hidden="true" />
-            <div class="pointer-events-none absolute right-0 top-0 h-80 w-80 rounded-full bg-gold-500/10 blur-[120px]" aria-hidden="true" />
+                            <form v-else @submit.prevent="submit" class="space-y-5">
+                                <!-- honeypot -->
+                                <input v-model="form.website" type="text" tabindex="-1" autocomplete="off" class="hidden" aria-hidden="true" />
 
-            <div class="relative mx-auto max-w-7xl px-5 lg:px-8">
-                <div class="grid gap-14 lg:grid-cols-12">
-                    <!-- Colonne texte -->
-                    <div class="lg:col-span-5">
-                        <p class="reveal text-xs font-semibold uppercase tracking-[0.2em] text-gold-400">
-                            {{ t('contact.eyebrow') }}
-                        </p>
-                        <h2 class="reveal mt-4 font-display text-3xl font-semibold leading-tight text-white sm:text-4xl lg:text-5xl" style="transition-delay: 80ms">
-                            {{ t('contact.title') }}
-                        </h2>
-                        <p class="reveal mt-5 max-w-md text-lg leading-relaxed text-navy-100" style="transition-delay: 140ms">
-                            {{ t('contact.intro') }}
-                        </p>
-
-                        <div class="reveal mt-9 space-y-4" style="transition-delay: 200ms">
-                            <a :href="'mailto:' + contactEmail" class="group flex items-center gap-4 rounded-2xl border border-white/10 bg-white/[0.03] p-4 transition hover:border-gold-400/40 hover:bg-white/[0.06]">
-                                <span class="grid size-12 place-items-center rounded-xl bg-gold-400/10 text-gold-400 ring-1 ring-gold-400/20">
-                                    <Mail class="size-5" />
-                                </span>
-                                <div class="leading-tight">
-                                    <p class="text-xs uppercase tracking-wide text-navy-200">{{ t('contact.emailLabel') }}</p>
-                                    <p class="font-medium text-white transition group-hover:text-gold-300">{{ contactEmail }}</p>
-                                </div>
-                            </a>
-                            <div class="flex items-center gap-4 rounded-2xl border border-white/10 bg-white/[0.03] p-4">
-                                <span class="grid size-12 place-items-center rounded-xl bg-gold-400/10 text-gold-400 ring-1 ring-gold-400/20">
-                                    <Languages class="size-5" />
-                                </span>
-                                <div class="leading-tight">
-                                    <p class="text-xs uppercase tracking-wide text-navy-200">{{ t('contact.langLabel') }}</p>
-                                    <p class="font-medium text-white">{{ t('contact.langValue') }}</p>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- Formulaire -->
-                    <div class="reveal lg:col-span-7" style="transition-delay: 160ms">
-                        <div class="rounded-3xl border border-white/10 bg-white p-7 shadow-2xl sm:p-9">
-                            <Transition
-                                enter-active-class="transition duration-500 ease-out"
-                                enter-from-class="opacity-0 scale-95"
-                            >
-                                <div v-if="submitted" class="flex min-h-[24rem] flex-col items-center justify-center text-center">
-                                    <span class="grid size-16 place-items-center rounded-full bg-emerald-50 text-emerald-500">
-                                        <Check class="size-8" />
-                                    </span>
-                                    <p class="mt-6 max-w-sm font-display text-2xl font-semibold text-navy-800">
-                                        {{ t('contact.form.success') }}
-                                    </p>
-                                    <a :href="'mailto:' + contactEmail" class="mt-6 text-sm font-semibold text-gold-600 hover:underline">
-                                        {{ contactEmail }}
-                                    </a>
-                                </div>
-
-                                <form v-else @submit.prevent="submit" class="space-y-5">
-                                    <!-- honeypot -->
-                                    <input v-model="form.website" type="text" tabindex="-1" autocomplete="off" class="hidden" aria-hidden="true" />
-
-                                    <div class="grid gap-5 sm:grid-cols-2">
-                                        <div>
-                                            <label class="mb-1.5 block text-sm font-medium text-navy-700">
-                                                {{ t('contact.form.name') }} <span class="text-gold-500">*</span>
-                                            </label>
-                                            <input
-                                                v-model="form.name"
-                                                type="text"
-                                                required
-                                                class="w-full rounded-xl border border-navy-100 bg-mist/50 px-4 py-3 text-navy-800 outline-none transition focus:border-gold-400 focus:bg-white focus:ring-4 focus:ring-gold-400/15"
-                                            />
-                                            <p v-if="form.errors.name" class="mt-1 text-xs text-red-500">{{ form.errors.name }}</p>
-                                        </div>
-                                        <div>
-                                            <label class="mb-1.5 block text-sm font-medium text-navy-700">{{ t('contact.form.company') }}</label>
-                                            <input
-                                                v-model="form.company"
-                                                type="text"
-                                                class="w-full rounded-xl border border-navy-100 bg-mist/50 px-4 py-3 text-navy-800 outline-none transition focus:border-gold-400 focus:bg-white focus:ring-4 focus:ring-gold-400/15"
-                                            />
-                                        </div>
-                                    </div>
-
-                                    <div class="grid gap-5 sm:grid-cols-2">
-                                        <div>
-                                            <label class="mb-1.5 block text-sm font-medium text-navy-700">
-                                                {{ t('contact.form.email') }} <span class="text-gold-500">*</span>
-                                            </label>
-                                            <input
-                                                v-model="form.email"
-                                                type="email"
-                                                required
-                                                class="w-full rounded-xl border border-navy-100 bg-mist/50 px-4 py-3 text-navy-800 outline-none transition focus:border-gold-400 focus:bg-white focus:ring-4 focus:ring-gold-400/15"
-                                            />
-                                            <p v-if="form.errors.email" class="mt-1 text-xs text-red-500">{{ form.errors.email }}</p>
-                                        </div>
-                                        <div>
-                                            <label class="mb-1.5 block text-sm font-medium text-navy-700">{{ t('contact.form.phone') }}</label>
-                                            <input
-                                                v-model="form.phone"
-                                                type="tel"
-                                                class="w-full rounded-xl border border-navy-100 bg-mist/50 px-4 py-3 text-navy-800 outline-none transition focus:border-gold-400 focus:bg-white focus:ring-4 focus:ring-gold-400/15"
-                                            />
-                                        </div>
-                                    </div>
-
+                                <div class="grid gap-5 sm:grid-cols-2">
                                     <div>
-                                        <label class="mb-1.5 block text-sm font-medium text-navy-700">{{ t('contact.form.service') }}</label>
-                                        <select
-                                            v-model="form.service"
-                                            class="w-full rounded-xl border border-navy-100 bg-mist/50 px-4 py-3 text-navy-800 outline-none transition focus:border-gold-400 focus:bg-white focus:ring-4 focus:ring-gold-400/15"
-                                        >
-                                            <option value="">{{ t('contact.form.servicePlaceholder') }}</option>
-                                            <option v-for="opt in serviceOptions" :key="opt" :value="opt">{{ opt }}</option>
-                                        </select>
-                                    </div>
-
-                                    <div>
-                                        <label class="mb-1.5 block text-sm font-medium text-navy-700">
-                                            {{ t('contact.form.message') }} <span class="text-gold-500">*</span>
+                                        <label for="f-name" class="field-label">
+                                            {{ t('contact.form.name') }} <span class="text-cobalt">*</span>
                                         </label>
-                                        <textarea
-                                            v-model="form.message"
-                                            required
-                                            rows="4"
-                                            :placeholder="t('contact.form.messagePlaceholder')"
-                                            class="w-full resize-none rounded-xl border border-navy-100 bg-mist/50 px-4 py-3 text-navy-800 outline-none transition placeholder:text-navy-300 focus:border-gold-400 focus:bg-white focus:ring-4 focus:ring-gold-400/15"
-                                        />
-                                        <p v-if="form.errors.message" class="mt-1 text-xs text-red-500">{{ form.errors.message }}</p>
+                                        <input id="f-name" v-model="form.name" type="text" required autocomplete="name" class="field" />
+                                        <p v-if="form.errors.name" class="mt-1.5 text-sm text-red-600">{{ form.errors.name }}</p>
                                     </div>
+                                    <div>
+                                        <label for="f-company" class="field-label">{{ t('contact.form.company') }}</label>
+                                        <input id="f-company" v-model="form.company" type="text" autocomplete="organization" class="field" />
+                                    </div>
+                                </div>
 
-                                    <div class="flex items-center justify-between gap-4 pt-1">
-                                        <p class="text-xs text-navy-400"><span class="text-gold-500">*</span> {{ t('contact.form.required') }}</p>
-                                        <button
-                                            type="submit"
-                                            :disabled="form.processing"
-                                            class="inline-flex items-center gap-2 rounded-full bg-navy-800 px-7 py-3.5 text-sm font-semibold text-white shadow-lg shadow-navy-800/20 transition hover:bg-navy-700 disabled:opacity-60"
-                                        >
-                                            {{ form.processing ? t('contact.form.sending') : t('contact.form.submit') }}
-                                            <ArrowRight v-if="!form.processing" class="size-4" />
-                                        </button>
+                                <div class="grid gap-5 sm:grid-cols-2">
+                                    <div>
+                                        <label for="f-email" class="field-label">
+                                            {{ t('contact.form.email') }} <span class="text-cobalt">*</span>
+                                        </label>
+                                        <input id="f-email" v-model="form.email" type="email" required autocomplete="email" class="field" />
+                                        <p v-if="form.errors.email" class="mt-1.5 text-sm text-red-600">{{ form.errors.email }}</p>
                                     </div>
-                                </form>
-                            </Transition>
+                                    <div>
+                                        <label for="f-phone" class="field-label">{{ t('contact.form.phone') }}</label>
+                                        <input id="f-phone" v-model="form.phone" type="tel" autocomplete="tel" class="field" />
+                                    </div>
+                                </div>
+
+                                <div>
+                                    <label for="f-service" class="field-label">{{ t('contact.form.service') }}</label>
+                                    <select id="f-service" v-model="form.service" class="field">
+                                        <option value="">{{ t('contact.form.servicePlaceholder') }}</option>
+                                        <option v-for="opt in serviceOptions" :key="opt" :value="opt">{{ opt }}</option>
+                                    </select>
+                                </div>
+
+                                <div>
+                                    <label for="f-message" class="field-label">
+                                        {{ t('contact.form.message') }} <span class="text-cobalt">*</span>
+                                    </label>
+                                    <textarea
+                                        id="f-message"
+                                        v-model="form.message"
+                                        required
+                                        rows="4"
+                                        :placeholder="t('contact.form.messagePlaceholder')"
+                                        class="field resize-none"
+                                    />
+                                    <p v-if="form.errors.message" class="mt-1.5 text-sm text-red-600">{{ form.errors.message }}</p>
+                                </div>
+
+                                <div class="flex flex-col-reverse gap-4 pt-1 sm:flex-row sm:items-center sm:justify-between">
+                                    <p class="text-sm text-muted"><span class="text-cobalt">*</span> {{ t('contact.form.required') }}</p>
+                                    <button type="submit" :disabled="form.processing" class="btn btn-primary w-full disabled:opacity-60 sm:w-auto">
+                                        {{ form.processing ? t('contact.form.sending') : t('contact.form.submit') }}
+                                    </button>
+                                </div>
+                            </form>
                         </div>
                     </div>
                 </div>
-            </div>
-        </section>
+            </section>
+        </main>
 
         <!-- ===================== FOOTER ===================== -->
-        <footer class="bg-navy-950 pt-16 pb-8">
-            <div class="mx-auto max-w-7xl px-5 lg:px-8">
-                <div class="grid gap-10 border-b border-white/10 pb-12 lg:grid-cols-12">
-                    <div class="lg:col-span-5">
-                        <IlodyLogo theme="dark" />
-                        <p class="mt-5 max-w-xs font-display text-lg leading-snug text-navy-100">
+        <footer class="on-dark border-t border-white/10 bg-ink pt-14 pb-28 text-white lg:pt-16 lg:pb-10">
+            <div class="mx-auto max-w-6xl px-5 lg:px-8">
+                <div class="grid gap-10 pb-12 sm:grid-cols-2 lg:grid-cols-12">
+                    <div class="sm:col-span-2 lg:col-span-6">
+                        <IlodyLogo on-dark class="h-14 w-auto" />
+                        <p class="mt-6 max-w-xs font-display text-xl font-semibold leading-snug tracking-tight">
                             {{ t('footer.tagline') }}
                         </p>
-                        <a :href="'mailto:' + contactEmail" class="mt-5 inline-flex items-center gap-2 text-sm text-navy-200 transition hover:text-gold-300">
-                            <Mail class="size-4" /> {{ contactEmail }}
-                        </a>
                     </div>
 
-                    <div class="lg:col-span-3 lg:col-start-8">
-                        <p class="text-xs font-semibold uppercase tracking-[0.2em] text-gold-400">{{ t('footer.services') }}</p>
-                        <ul class="mt-4 space-y-2.5">
-                            <li v-for="svc in services" :key="svc.key">
-                                <button @click="goTo('services')" class="text-sm text-navy-100 transition hover:text-white">
+                    <div class="lg:col-span-3">
+                        <p class="text-sm text-white/60">{{ t('footer.services') }}</p>
+                        <ul class="mt-4 space-y-3">
+                            <li v-for="(svc, i) in services" :key="svc.key">
+                                <a
+                                    href="#services"
+                                    @click.prevent="activeService = i; goTo('services')"
+                                    class="text-white/90 hover:text-apricot"
+                                >
                                     {{ t('services.' + svc.key + '.title') }}
-                                </button>
+                                </a>
                             </li>
                         </ul>
                     </div>
 
-                    <div class="lg:col-span-2">
-                        <p class="text-xs font-semibold uppercase tracking-[0.2em] text-gold-400">{{ t('footer.navigate') }}</p>
-                        <ul class="mt-4 space-y-2.5">
+                    <div class="lg:col-span-3">
+                        <p class="text-sm text-white/60">{{ t('footer.navigate') }}</p>
+                        <ul class="mt-4 space-y-3">
                             <li v-for="link in navLinks" :key="link.id">
-                                <button @click="goTo(link.id)" class="text-sm text-navy-100 transition hover:text-white">
+                                <a :href="'#' + link.id" @click.prevent="goTo(link.id)" class="text-white/90 hover:text-apricot">
                                     {{ link.label }}
-                                </button>
+                                </a>
                             </li>
                         </ul>
                     </div>
                 </div>
 
-                <div class="flex flex-col items-center justify-between gap-3 pt-6 text-xs text-navy-300 sm:flex-row">
+                <div class="flex flex-col gap-2 border-t border-white/10 pt-6 text-sm text-white/60 sm:flex-row sm:items-center sm:justify-between">
                     <p>© {{ new Date().getFullYear() }} Ilody Callcenter. {{ t('footer.rights') }}</p>
-                    <p class="flex items-center gap-2">
-                        <span class="inline-flex items-center gap-1.5"><Phone class="size-3.5 text-gold-400" /> FR / NL</span>
-                    </p>
+                    <a :href="'mailto:' + contactEmail" class="break-all hover:text-apricot">{{ contactEmail }}</a>
                 </div>
             </div>
         </footer>
+
+        <!-- Barre d'action mobile -->
+        <div
+            class="fixed inset-x-0 bottom-0 z-30 border-t border-line bg-paper/95 px-5 pt-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] backdrop-blur-md transition-transform duration-300 lg:hidden"
+            :class="showStickyCta ? 'translate-y-0' : 'translate-y-full'"
+            :inert="!showStickyCta"
+        >
+            <button @click="goTo('contact')" class="btn btn-primary w-full">{{ t('nav.cta') }}</button>
+        </div>
     </div>
 </template>
-
-<style scoped>
-.eq-bar {
-    height: 20%;
-    animation: eq 1.1s ease-in-out infinite alternate;
-}
-@keyframes eq {
-    0% { height: 15%; opacity: 0.5; }
-    100% { height: 100%; opacity: 1; }
-}
-@media (prefers-reduced-motion: reduce) {
-    .eq-bar { animation: none; height: 55%; }
-}
-</style>

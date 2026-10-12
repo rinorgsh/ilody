@@ -1,41 +1,41 @@
 <script setup>
+/*
+ * Logo Ilody.
+ * Le « i » est un opérateur : le point est la tête, le fût le buste, l'arc le casque-micro.
+ * Les fûts i, l, d, y montent et descendent comme les barres d'un niveau sonore.
+ */
 defineProps({
-    theme: { type: String, default: 'dark' }, // 'dark' => texte clair, 'light' => texte navy
-    compact: { type: Boolean, default: false },
+    variant: { type: String, default: 'wordmark' }, // 'wordmark' | 'mark'
+    onDark: { type: Boolean, default: false },
 });
 </script>
 
 <template>
-    <span class="inline-flex items-center gap-3 select-none">
-        <span
-            class="grid place-items-center rounded-xl bg-navy-800 ring-1 ring-white/10 shadow-sm"
-            :class="compact ? 'size-9' : 'size-11'"
-        >
-            <svg viewBox="0 0 64 64" class="h-1/2 w-1/2" fill="none" aria-hidden="true">
-                <g stroke="#D4AF37" stroke-width="4.2" stroke-linecap="round">
-                    <path d="M18 28 V36" />
-                    <path d="M27 20 V44" />
-                    <path d="M36 25 V39" />
-                    <path d="M45 17 V47" />
-                </g>
-            </svg>
-        </span>
-        <span class="flex flex-col leading-none">
-            <span
-                class="font-display font-semibold tracking-tight"
-                :class="[
-                    compact ? 'text-lg' : 'text-xl',
-                    theme === 'dark' ? 'text-white' : 'text-navy-800',
-                ]"
-            >
-                Ilody
-            </span>
-            <span
-                class="mt-1 text-[0.6rem] font-semibold uppercase tracking-[0.28em]"
-                :class="theme === 'dark' ? 'text-gold-400' : 'text-gold-500'"
-            >
-                Callcenter
-            </span>
-        </span>
-    </span>
+    <svg v-if="variant === 'mark'" viewBox="0 0 64 64" fill="none" role="img" aria-label="Ilody Callcenter">
+        <rect width="64" height="64" rx="17" class="fill-cobalt" />
+        <g stroke="#fff" stroke-linecap="round">
+            <path d="M32 39.5V50" stroke-width="9.5" />
+            <path d="M17.5 23a14.5 14.5 0 0 1 29 0" stroke-width="3.6" />
+            <path d="M17.5 21v5M46.5 21v5" stroke-width="6.4" />
+            <path d="M17.5 27c0 6 2.5 9 7.5 9.5" stroke-width="2.6" />
+        </g>
+        <circle cx="32" cy="23" r="6.6" class="fill-apricot" />
+    </svg>
+
+    <svg v-else viewBox="2 5 197 100" fill="none" role="img" aria-label="Ilody Callcenter">
+        <g :class="onDark ? 'stroke-white' : 'stroke-ink'" stroke-width="10" stroke-linecap="round">
+            <path d="M21 45V75" />
+            <path d="M49 17V75" />
+            <circle cx="82" cy="60" r="15" />
+            <circle cx="128" cy="60" r="15" />
+            <path d="M143 17V75" />
+            <path d="M162 45V60a15 15 0 0 0 30 0M192 45V85a15 15 0 0 1-15 15h-5" />
+        </g>
+        <g :class="onDark ? 'stroke-cobalt-300' : 'stroke-cobalt'" stroke-linecap="round">
+            <path d="M7 23a14 14 0 0 1 28 0" stroke-width="3.6" />
+            <path d="M7 21v5M35 21v5" stroke-width="6.4" />
+            <path d="M7 27c0 6 2 8.5 6 9" stroke-width="2.6" />
+        </g>
+        <circle cx="21" cy="23" r="6.6" class="fill-apricot" />
+    </svg>
 </template>
